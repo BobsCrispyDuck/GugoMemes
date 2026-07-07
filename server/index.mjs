@@ -190,6 +190,19 @@ async function pendingImages() {
   }));
 }
 
+async function approvePendingFile(rawFilename) {
+  const filename = path.basename(String(rawFilename ?? ""));
+  if (!filename) throw new Error("Missing filename.");
+  await fs.rename(path.join(pendingDir, filename), path.join(approvedDir, filename));
+  const meta = await readMeta(pendingMetaDir, filename);
+  await writeMeta(approvedMetaDir, filename, {
+    ...meta,
+    approvedAt: new Date().toISOString()
+  });
+  await deleteMeta(pendingMetaDir, filename);
+  return filename;
+}
+
 app.get("/api/gallery", async (_req, res, next) => {
   try {
     const staticImages = await listImages(publicImageDir, "/images", 0, "gugo-images");
@@ -277,18 +290,25 @@ app.get("/api/admin/pending-image/:filename", requireAdmin, async (req, res) => 
 
 app.post("/api/admin/approve", requireAdmin, async (req, res) => {
   try {
-    const filename = path.basename(String(req.body?.filename ?? ""));
-    if (!filename) throw new Error("Missing filename.");
-    await fs.rename(path.join(pendingDir, filename), path.join(approvedDir, filename));
-    const meta = await readMeta(pendingMetaDir, filename);
-    await writeMeta(approvedMetaDir, filename, {
-      ...meta,
-      approvedAt: new Date().toISOString()
-    });
-    await deleteMeta(pendingMetaDir, filename);
-    res.json({ ok: true });
+    const filename = await approvePendingFile(req.body?.filename);
+    res.json({ ok: true, filename });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Approve failed." });
+  }
+});
+
+app.post("/api/admin/approve-all", requireAdmin, async (req, res) => {
+  try {
+    const filenames = Array.isArray(req.body?.filenames) ? req.body.filenames : [];
+    const safeFilenames = [...new Set(filenames.map((filename) => path.basename(String(filename ?? ""))).filter(Boolean))];
+    if (safeFilenames.length === 0) throw new Error("No pending uploads selected.");
+    const approved = [];
+    for (const filename of safeFilenames) {
+      approved.push(await approvePendingFile(filename));
+    }
+    res.json({ ok: true, approved });
+  } catch (error) {
+    res.status(400).json({ error: error instanceof Error ? error.message : "Approve all failed." });
   }
 });
 

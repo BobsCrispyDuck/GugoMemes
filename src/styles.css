@@ -866,6 +866,14 @@ h1 {
   margin-bottom: 14px;
 }
 
+.sectionTitle > div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .sectionTitle span {
   align-items: center;
   background: var(--accent);

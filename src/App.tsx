@@ -156,6 +156,17 @@ function formatApprovalDate(image: GalleryImage) {
   }).format(date);
 }
 
+function visibleImageTitle(image: GalleryImage) {
+  const title = image.title.trim();
+  if (/\.(jpe?g|png|webp|gif)$/i.test(title)) {
+    if (image.category === "holder-submitted-gifs") return "Holder submitted GIF";
+    if (image.category === "holder-submitted") return "Holder submitted meme";
+    if (image.category === "gugo-memes") return "GUGO meme";
+    return "GUGO image";
+  }
+  return title;
+}
+
 function isAcceptedImageFile(file: File) {
   if (acceptedImageTypes.has(file.type)) return true;
   const name = file.name.toLowerCase();
@@ -246,10 +257,11 @@ function GalleryView({
         <section className="gallery" aria-label={`${activeMeta.label} gallery`}>
           {images.map((image) => {
             const src = image.src ?? imageUrl(image.filename);
+            const title = visibleImageTitle(image);
             return (
               <article className="tile" key={image.id}>
                 <button className="previewButton" onClick={() => onImageOpen(image)}>
-                  <img src={src} alt={image.title} loading="lazy" />
+                  <img src={src} alt={title} loading="lazy" />
                   <span className="previewOverlay">
                     <Maximize2 />
                     View
@@ -257,7 +269,7 @@ function GalleryView({
                 </button>
                 <div className="tileFooter">
                   <div>
-                    <h2>{image.title}</h2>
+                    <h2>{title}</h2>
                     {image.twitterHandle && image.twitterUrl && (
                       <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
                         @{image.twitterHandle}
@@ -269,7 +281,7 @@ function GalleryView({
                       </a>
                     )}
                   </div>
-                  <a className="downloadButton" href={src} download={image.filename} aria-label={`Download ${image.title}`}>
+                  <a className="downloadButton" href={src} download={image.filename} aria-label={`Download ${title}`}>
                     <Download />
                   </a>
                 </div>
@@ -447,14 +459,15 @@ function LatestApprovedMemes({
         <div className="latestMemeList">
           {images.map((image) => {
             const src = image.src ?? imageUrl(image.filename);
+            const title = visibleImageTitle(image);
             return (
               <article className="latestMemeItem" key={image.id}>
                 <button className="latestMemeImage" onClick={() => onImageOpen(image, images)}>
-                  <img src={src} alt={image.title} />
+                  <img src={src} alt={title} />
                   <span>View</span>
                 </button>
                 <div className="latestMemeMeta">
-                  <strong>{image.title}</strong>
+                  <strong>{title}</strong>
                   <p>{formatApprovalDate(image)}</p>
                   {image.twitterHandle && image.twitterUrl && (
                     <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
@@ -552,6 +565,30 @@ function AdminView({ onGalleryChanged }: { onGalleryChanged: () => Promise<void>
     }
   }
 
+  async function approveAllPending() {
+    const filenames = moderation.pending.map((image) => image.filename);
+    if (filenames.length === 0) return;
+    setBusy("approve-all");
+    setNotice(null);
+    try {
+      const response = await fetch("/api/admin/approve-all", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ filenames })
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) throw new Error(data.error ?? "Approve all failed.");
+      await loadModeration();
+      await onGalleryChanged();
+      const approvedCount = Array.isArray(data.approved) ? data.approved.length : filenames.length;
+      setNotice({ type: "success", text: `${approvedCount} upload${approvedCount === 1 ? "" : "s"} approved and live.` });
+    } catch (error) {
+      setNotice({ type: "error", text: error instanceof Error ? error.message : "Approve all failed." });
+    } finally {
+      setBusy(null);
+    }
+  }
+
   useEffect(() => {
     loadModeration().catch(() => setLoggedIn(false));
   }, []);
@@ -605,6 +642,12 @@ function AdminView({ onGalleryChanged }: { onGalleryChanged: () => Promise<void>
         title="Pending review"
         emptyText="No pending uploads."
         images={moderation.pending}
+        headerAction={moderation.pending.length > 0 ? (
+          <button className="primaryButton compact" disabled={Boolean(busy)} onClick={approveAllPending}>
+            {busy === "approve-all" ? <Loader2 className="spin" /> : <CheckCircle2 />}
+            Approve all
+          </button>
+        ) : null}
         renderActions={(image) => (
           <>
             <button className="primaryButton compact" disabled={Boolean(busy)} onClick={() => moderate("approve", image.filename)}>
@@ -637,18 +680,23 @@ function ModerationSection({
   title,
   emptyText,
   images,
+  headerAction,
   renderActions
 }: {
   title: string;
   emptyText: string;
   images: GalleryImage[];
+  headerAction?: ReactNode;
   renderActions: (image: GalleryImage) => ReactNode;
 }) {
   return (
     <div className="moderationBlock">
       <div className="sectionTitle">
         <h2>{title}</h2>
-        <span>{images.length}</span>
+        <div>
+          {headerAction}
+          <span>{images.length}</span>
+        </div>
       </div>
       {images.length === 0 ? (
         <p className="emptyText">{emptyText}</p>
@@ -656,9 +704,9 @@ function ModerationSection({
         <div className="moderationGrid">
           {images.map((image) => (
             <article className="moderationCard" key={image.filename}>
-              <img src={image.src ?? imageUrl(image.filename)} alt={image.filename} />
+              <img src={image.src ?? imageUrl(image.filename)} alt={visibleImageTitle(image)} />
               <div>
-                <strong>{image.filename}</strong>
+                <strong>{visibleImageTitle(image)}</strong>
                 {image.twitterHandle && image.twitterUrl && (
                   <a className="moderationAttribution" href={image.twitterUrl} target="_blank" rel="noreferrer">
                     @{image.twitterHandle}
@@ -705,13 +753,14 @@ function Lightbox({
   onNext: () => void;
 }) {
   const src = image.src ?? imageUrl(image.filename);
+  const title = visibleImageTitle(image);
   return (
-    <div className="lightbox" role="dialog" aria-modal="true" aria-label={`${image.title} preview`} onClick={(event) => event.currentTarget === event.target && onClose()}>
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={`${title} preview`} onClick={(event) => event.currentTarget === event.target && onClose()}>
       <div className="lightboxPanel">
         <div className="lightboxTop">
           <div>
             <span>{index + 1} / {total}</span>
-            <h2>{image.title}</h2>
+            <h2>{title}</h2>
             {image.twitterHandle && image.twitterUrl && (
               <a className="lightboxAttribution" href={image.twitterUrl} target="_blank" rel="noreferrer">
                 @{image.twitterHandle}
@@ -724,7 +773,7 @@ function Lightbox({
             )}
           </div>
           <div className="lightboxActions">
-            <a className="actionButton" href={src} download={image.filename} aria-label={`Download ${image.title}`}>
+            <a className="actionButton" href={src} download={image.filename} aria-label={`Download ${title}`}>
               <Download />
               Download
             </a>
@@ -737,7 +786,7 @@ function Lightbox({
           <button className="navButton previous" onClick={onPrevious} aria-label="Previous image">
             <ChevronLeft />
           </button>
-          <img src={src} alt={image.title} />
+          <img src={src} alt={title} />
           <button className="navButton next" onClick={onNext} aria-label="Next image">
             <ChevronRight />
           </button>
