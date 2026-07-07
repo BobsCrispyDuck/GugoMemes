@@ -10,7 +10,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const distDir = path.join(rootDir, "dist");
 const publicImageDir = path.join(rootDir, "public", "images");
 const publicMemeDir = path.join(rootDir, "public", "memes");
-const storageDir = path.resolve(rootDir, process.env.GUGO_STORAGE_DIR ?? "storage");
+const storageDir = resolveStorageDir(process.env.GUGO_STORAGE_DIR ?? "storage");
 const pendingDir = path.join(storageDir, "pending");
 const approvedDir = path.join(storageDir, "approved");
 const pendingMetaDir = path.join(storageDir, "pending-meta");
@@ -44,6 +44,15 @@ const upload = multer({
 app.disable("x-powered-by");
 app.use(cookieParser());
 app.use(express.json({ limit: "64kb" }));
+
+function resolveStorageDir(configuredStorageDir) {
+  if (path.isAbsolute(configuredStorageDir)) return configuredStorageDir;
+  const parentDir = path.basename(path.dirname(rootDir));
+  if (parentDir === "releases") {
+    return path.resolve(rootDir, "..", "..", configuredStorageDir);
+  }
+  return path.resolve(rootDir, configuredStorageDir);
+}
 
 function timingSafeEqual(a, b) {
   const left = Buffer.from(a);

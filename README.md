@@ -22,10 +22,15 @@ Categories:
 To run the upload/moderation app, copy `.env.example` to `.env`, set the upload
 and admin passwords, run `npm run build`, then run `npm start`.
 
+For production, set `GUGO_STORAGE_DIR` to an absolute persistent path such as
+`/opt/crispytools/gugo/storage`. Do not point production uploads at a release
+folder, or approved holder uploads will appear to disappear on the next deploy.
+
 ## Deployment
 
 The current static release is served at `https://gugo.crispytools.xyz/`.
 
 - DNS: `gugo.crispytools.xyz` A record to `3.225.64.220`, DNS-only.
-- Server release root: `/opt/crispytools/gugo/current`.
+- Server release symlink: `/opt/crispytools/gugo/app-current`.
+- Persistent upload storage: `/opt/crispytools/gugo/storage`.
 - Caddy backup from the first route install: `/opt/crispytools/backups/Caddyfile-before-gugo-20260707-002925`.
