@@ -7,7 +7,6 @@ import {
   Loader2,
   Lock,
   Maximize2,
-  Moon,
   ShieldCheck,
   Trash2,
   Upload,
@@ -131,7 +130,6 @@ function Header({ imageCount, view }: { imageCount: number; view: View }) {
   return (
     <header className="hero">
       <div className="heroCopy">
-        <span className="mark"><Moon /> Dark mode default</span>
         <h1>{view === "admin" ? "GUGO Admin" : view === "upload" ? "Add GUGO" : "GUGO Gallery"}</h1>
         <p>
           {view === "admin"

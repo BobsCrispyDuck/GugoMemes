@@ -86,23 +86,6 @@ a:focus-visible {
   z-index: 1;
 }
 
-.mark {
-  align-items: center;
-  display: inline-flex;
-  gap: 8px;
-  margin-bottom: 18px;
-  color: var(--accent);
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.mark svg {
-  height: 16px;
-  width: 16px;
-}
-
 h1,
 h2,
 p {
