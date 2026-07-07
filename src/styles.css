@@ -726,21 +726,30 @@ h1 {
   background: var(--surface);
   box-shadow: var(--shadow);
   display: grid;
-  gap: 16px;
+  align-content: start;
+  gap: 22px;
   min-height: 100%;
   padding: clamp(18px, 4vw, 30px);
 }
 
 .latestMemeList {
   display: grid;
-  gap: 12px;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .latestMemeItem {
-  align-items: center;
+  align-content: start;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
   display: grid;
-  gap: 12px;
-  grid-template-columns: 132px minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.latestMemeItem:first-child {
+  grid-column: 1 / -1;
 }
 
 .latestMemeHeader span {
@@ -756,16 +765,17 @@ h1 {
 .latestMemeHeader h2 {
   font-size: clamp(1.5rem, 4vw, 2.3rem);
   line-height: 1;
+  text-wrap: balance;
 }
 
 .latestMemeImage {
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 4 / 3;
   display: grid;
   overflow: hidden;
   position: relative;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-raised);
+  border: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--surface-raised) 80%, black);
   color: inherit;
   cursor: pointer;
   padding: 0;
@@ -774,10 +784,16 @@ h1 {
   width: 100%;
 }
 
+.latestMemeItem:first-child .latestMemeImage {
+  aspect-ratio: 16 / 8;
+}
+
 .latestMemeImage img {
   display: block;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  outline: 1px solid rgba(255, 255, 255, 0.1);
+  outline-offset: -1px;
   width: 100%;
   transition: filter 180ms ease, transform 180ms ease;
 }
@@ -808,24 +824,37 @@ h1 {
   transform: translateY(0);
 }
 
-.latestMemeMeta strong {
-  display: block;
-  font-size: 1rem;
-  line-height: 1.1;
+.latestMemeMeta {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
 }
 
 .latestMemeMeta p {
-  margin-top: 5px;
   overflow: hidden;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 750;
+  font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.latestMemeMeta .attributionLink {
+.latestMemeLinks {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+}
+
+.latestMemeMeta .attributionLink,
+.latestMemeMeta .packLink {
   font-size: 0.74rem;
+  margin-top: 0;
+}
+
+.latestMemeMeta .packLink {
+  color: var(--accent);
 }
 
 .latestMemeEmpty {
@@ -1012,8 +1041,12 @@ h1 {
     transform: translateY(0);
   }
 
+  .latestMemeList {
+    grid-template-columns: 1fr;
+  }
+
   .latestMemeItem {
-    grid-template-columns: 112px minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .lightbox {

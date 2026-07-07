@@ -156,6 +156,19 @@ function formatApprovalDate(image: GalleryImage) {
   }).format(date);
 }
 
+function formatCompactApprovalDate(image: GalleryImage) {
+  const value = image.approvedAt ?? image.submittedAt;
+  if (!value) return "Approved recently";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Approved recently";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
+}
+
 function visibleImageTitle(image: GalleryImage) {
   const title = image.title.trim();
   if (/\.(jpe?g|png|webp|gif)$/i.test(title)) {
@@ -466,17 +479,19 @@ function LatestApprovedMemes({
                   <span>View</span>
                 </button>
                 <div className="latestMemeMeta">
-                  <p>{formatApprovalDate(image)}</p>
-                  {image.twitterHandle && image.twitterUrl && (
-                    <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
-                      Follow fellow runner @{image.twitterHandle}
-                    </a>
-                  )}
-                  {image.referralUrl && (
-                    <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
-                      {referralLinkText(image)}
-                    </a>
-                  )}
+                  <p>{formatCompactApprovalDate(image)}</p>
+                  <div className="latestMemeLinks">
+                    {image.twitterHandle && image.twitterUrl && (
+                      <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
+                        @{image.twitterHandle}
+                      </a>
+                    )}
+                    {image.referralUrl && (
+                      <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+                        Join pack
+                      </a>
+                    )}
+                  </div>
                 </div>
               </article>
             );
