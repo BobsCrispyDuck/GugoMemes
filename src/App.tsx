@@ -269,7 +269,6 @@ function GalleryView({
                 </button>
                 <div className="tileFooter">
                   <div>
-                    <h2>{title}</h2>
                     {image.twitterHandle && image.twitterUrl && (
                       <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
                         @{image.twitterHandle}
@@ -467,7 +466,6 @@ function LatestApprovedMemes({
                   <span>View</span>
                 </button>
                 <div className="latestMemeMeta">
-                  <strong>{title}</strong>
                   <p>{formatApprovalDate(image)}</p>
                   {image.twitterHandle && image.twitterUrl && (
                     <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
@@ -706,7 +704,6 @@ function ModerationSection({
             <article className="moderationCard" key={image.filename}>
               <img src={image.src ?? imageUrl(image.filename)} alt={visibleImageTitle(image)} />
               <div>
-                <strong>{visibleImageTitle(image)}</strong>
                 {image.twitterHandle && image.twitterUrl && (
                   <a className="moderationAttribution" href={image.twitterUrl} target="_blank" rel="noreferrer">
                     @{image.twitterHandle}
@@ -760,7 +757,6 @@ function Lightbox({
         <div className="lightboxTop">
           <div>
             <span>{index + 1} / {total}</span>
-            <h2>{title}</h2>
             {image.twitterHandle && image.twitterUrl && (
               <a className="lightboxAttribution" href={image.twitterUrl} target="_blank" rel="noreferrer">
                 @{image.twitterHandle}
