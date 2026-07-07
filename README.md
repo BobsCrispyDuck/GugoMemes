@@ -10,6 +10,9 @@ Standalone static gallery for `https://gugo.crispytools.xyz/`.
 
 The gallery is data-driven through `src/data/gallery.ts`; add images to `public/images/` and add filenames there.
 
+For daily imports, drop new source images into `incoming/`. The automation treats
+that folder as the project inbox and copies new images into `public/images/`.
+
 ## Deployment
 
 The current static release is served at `https://gugo.crispytools.xyz/`.
