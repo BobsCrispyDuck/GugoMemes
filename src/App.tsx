@@ -136,6 +136,17 @@ function approvalSortValue(image: GalleryImage) {
   return image.approvedAt ?? image.submittedAt ?? image.filename;
 }
 
+function formatApprovalDate(image: GalleryImage) {
+  const value = image.approvedAt ?? image.submittedAt;
+  if (!value) return "Approved recently";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Approved recently";
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(date);
+}
+
 function Header({ imageCount, view }: { imageCount: number; view: View }) {
   return (
     <header className="hero">
@@ -239,31 +250,34 @@ function GalleryView({
 function UploadView({ latestApprovedMeme }: { latestApprovedMeme: GalleryImage | null }) {
   const [password, setPassword] = useState("");
   const [twitterHandle, setTwitterHandle] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
 
   async function submitUpload(event: FormEvent) {
     event.preventDefault();
     setNotice(null);
-    if (!file) {
-      setNotice({ type: "error", text: "Pick an image first." });
+    if (files.length === 0) {
+      setNotice({ type: "error", text: "Pick at least one image first." });
       return;
     }
 
     const form = new FormData();
     form.append("password", password);
     form.append("twitterHandle", twitterHandle);
-    form.append("image", file);
+    files.forEach((file) => form.append("image", file));
     setBusy(true);
     try {
       const response = await fetch("/api/upload", { method: "POST", body: form });
       const data = await response.json();
       if (!response.ok || data.error) throw new Error(data.error ?? "Upload failed.");
-      setFile(null);
+      const uploadCount = Array.isArray(data.filenames) ? data.filenames.length : files.length;
+      setFiles([]);
+      setFileInputKey((key) => key + 1);
       setPassword("");
       setTwitterHandle("");
-      setNotice({ type: "success", text: "Uploaded. It will show up after approval." });
+      setNotice({ type: "success", text: uploadCount === 1 ? "Uploaded. It will show up after approval." : `${uploadCount} uploads queued for review.` });
     } catch (error) {
       setNotice({ type: "error", text: error instanceof Error ? error.message : "Upload failed." });
     } finally {
@@ -295,9 +309,18 @@ function UploadView({ latestApprovedMeme }: { latestApprovedMeme: GalleryImage |
             />
           </label>
           <label>
-            <span>Image</span>
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+            <span>Images</span>
+            <input
+              key={fileInputKey}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+            />
           </label>
+          {files.length > 0 && (
+            <p className="selectedFiles">{files.length === 1 ? files[0].name : `${files.length} images selected`}</p>
+          )}
           <button className="primaryButton" type="submit" disabled={busy}>
             {busy ? <Loader2 className="spin" /> : <Upload />}
             {busy ? "Uploading" : "Upload for review"}
@@ -312,6 +335,7 @@ function UploadView({ latestApprovedMeme }: { latestApprovedMeme: GalleryImage |
 
 function LatestApprovedMeme({ image }: { image: GalleryImage | null }) {
   const src = image ? image.src ?? imageUrl(image.filename) : null;
+  const approvalDate = image ? formatApprovalDate(image) : null;
 
   return (
     <aside className="latestMemePanel" aria-label="Latest approved meme">
@@ -327,10 +351,10 @@ function LatestApprovedMeme({ image }: { image: GalleryImage | null }) {
           </a>
           <div className="latestMemeMeta">
             <strong>{image.title}</strong>
-            <p>{image.filename}</p>
+            <p>{approvalDate}</p>
             {image.twitterHandle && image.twitterUrl && (
               <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
-                @{image.twitterHandle}
+                Follow fellow runner @{image.twitterHandle}
               </a>
             )}
           </div>

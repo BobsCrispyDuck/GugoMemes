@@ -37,7 +37,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 8 * 1024 * 1024,
-    files: 1
+    files: 20
   }
 });
 
@@ -167,23 +167,33 @@ app.get("/api/gallery", async (_req, res, next) => {
   }
 });
 
-app.post("/api/upload", upload.single("image"), async (req, res) => {
+app.post("/api/upload", upload.array("image", 20), async (req, res) => {
   try {
     if (!timingSafeEqual(String(req.body?.password ?? ""), uploadPassword)) {
       res.status(401).json({ error: "Wrong upload password." });
       return;
     }
 
-    assertImage(req.file);
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length === 0) throw new Error("Choose at least one image first.");
+    files.forEach(assertImage);
+
     const twitterHandle = normalizeTwitterHandle(req.body?.twitterHandle);
-    const filename = safeStorageName(req.file.originalname);
-    await fs.writeFile(path.join(pendingDir, filename), req.file.buffer, { flag: "wx" });
-    await writeMeta(pendingMetaDir, filename, {
-      twitterHandle,
-      originalName: req.file.originalname,
-      submittedAt: new Date().toISOString()
-    });
-    res.json({ ok: true, filename });
+    const submittedAt = new Date().toISOString();
+    const filenames = [];
+
+    for (const file of files) {
+      const filename = safeStorageName(file.originalname);
+      await fs.writeFile(path.join(pendingDir, filename), file.buffer, { flag: "wx" });
+      await writeMeta(pendingMetaDir, filename, {
+        twitterHandle,
+        originalName: file.originalname,
+        submittedAt
+      });
+      filenames.push(filename);
+    }
+
+    res.json({ ok: true, filenames });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." });
   }
