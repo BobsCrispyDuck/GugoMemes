@@ -3,10 +3,12 @@ export interface GalleryImage {
   title: string;
   filename: string;
   src?: string;
-  category?: "gugo-images" | "gugo-memes" | "holder-submitted";
+  category?: "gugo-images" | "gugo-memes" | "holder-submitted" | "holder-submitted-gifs";
   source?: "static" | "approved";
   twitterHandle?: string | null;
   twitterUrl?: string | null;
+  referralCode?: string | null;
+  referralUrl?: string | null;
   submittedAt?: string | null;
   approvedAt?: string | null;
 }

@@ -14,18 +14,24 @@ import {
   XCircle
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { GalleryImage, galleryImages, imageUrl } from "./data/gallery";
 
 type View = "gallery" | "upload" | "admin";
 type Notice = { type: "success" | "error"; text: string } | null;
-type CategoryId = "gugo-images" | "gugo-memes" | "holder-submitted";
+type CategoryId = "gugo-images" | "gugo-memes" | "holder-submitted" | "holder-submitted-gifs";
 
 const categories: Array<{ id: CategoryId; label: string; empty: string }> = [
   { id: "gugo-images", label: "GUGO images", empty: "No GUGO images yet." },
   { id: "gugo-memes", label: "GUGO memes", empty: "No official GUGO memes yet." },
-  { id: "holder-submitted", label: "Holder submitted memes", empty: "No holder submitted memes have been approved yet." }
+  { id: "holder-submitted", label: "Holder submitted memes", empty: "No holder submitted memes have been approved yet." },
+  { id: "holder-submitted-gifs", label: "Holder submitted GIFs", empty: "No holder GIFs have been approved yet." }
 ];
+const maxUploadFiles = 20;
+const moderationPollMs = 15000;
+const crispyReferralUrl = "https://gugo.run/register.html?ref=RUNGRZJ";
+const acceptedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const acceptedImageExtensions = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
 interface ModerationPayload {
   pending: GalleryImage[];
@@ -150,6 +156,28 @@ function formatApprovalDate(image: GalleryImage) {
   }).format(date);
 }
 
+function isAcceptedImageFile(file: File) {
+  if (acceptedImageTypes.has(file.type)) return true;
+  const name = file.name.toLowerCase();
+  return acceptedImageExtensions.some((extension) => name.endsWith(extension));
+}
+
+function referralLinkText(image: GalleryImage) {
+  return image.twitterHandle ? `Join @${image.twitterHandle}'s GUGO Pack` : "Join this runner's GUGO Pack";
+}
+
+function moderationSignature(payload: ModerationPayload) {
+  return [
+    ...payload.pending.map((image) => `pending:${image.filename}`),
+    ...payload.approved.map((image) => `approved:${image.filename}`)
+  ].sort().join("|");
+}
+
+function hasNewPendingUploads(previous: ModerationPayload, next: ModerationPayload) {
+  const previousPending = new Set(previous.pending.map((image) => image.filename));
+  return next.pending.some((image) => !previousPending.has(image.filename));
+}
+
 function Header({ imageCount, view }: { imageCount: number; view: View }) {
   return (
     <header className="hero">
@@ -230,10 +258,14 @@ function GalleryView({
                 <div className="tileFooter">
                   <div>
                     <h2>{image.title}</h2>
-                    <p>{image.filename}</p>
                     {image.twitterHandle && image.twitterUrl && (
                       <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
                         @{image.twitterHandle}
+                      </a>
+                    )}
+                    {image.referralUrl && (
+                      <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+                        {referralLinkText(image)}
                       </a>
                     )}
                   </div>
@@ -259,10 +291,36 @@ function UploadView({
 }) {
   const [password, setPassword] = useState("");
   const [twitterHandle, setTwitterHandle] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
+
+  function chooseFiles(nextFiles: File[]) {
+    setNotice(null);
+    const imageFiles = nextFiles.filter(isAcceptedImageFile);
+    if (imageFiles.length !== nextFiles.length) {
+      setNotice({ type: "error", text: "Only JPG, PNG, WebP, and GIF images are allowed." });
+    }
+    if (imageFiles.length > maxUploadFiles) {
+      setFiles(imageFiles.slice(0, maxUploadFiles));
+      setNotice({ type: "error", text: `Only ${maxUploadFiles} images can be uploaded at once.` });
+      return;
+    }
+    setFiles(imageFiles);
+  }
+
+  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
+    chooseFiles(Array.from(event.target.files ?? []));
+  }
+
+  function onDrop(event: DragEvent<HTMLSpanElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    chooseFiles(Array.from(event.dataTransfer.files));
+  }
 
   async function submitUpload(event: FormEvent) {
     event.preventDefault();
@@ -275,6 +333,7 @@ function UploadView({
     const form = new FormData();
     form.append("password", password);
     form.append("twitterHandle", twitterHandle);
+    form.append("referralCode", referralCode);
     files.forEach((file) => form.append("image", file));
     setBusy(true);
     try {
@@ -286,6 +345,7 @@ function UploadView({
       setFileInputKey((key) => key + 1);
       setPassword("");
       setTwitterHandle("");
+      setReferralCode("");
       setNotice({ type: "success", text: uploadCount === 1 ? "Uploaded. It will show up after approval." : `${uploadCount} uploads queued for review.` });
     } catch (error) {
       setNotice({ type: "error", text: error instanceof Error ? error.message : "Upload failed." });
@@ -318,14 +378,42 @@ function UploadView({
             />
           </label>
           <label>
-            <span>Images</span>
+            <span>GUGO referral code</span>
             <input
-              key={fileInputKey}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              multiple
-              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+              type="text"
+              value={referralCode}
+              onChange={(event) => setReferralCode(event.target.value)}
+              placeholder="RUNGRZJ or your referral URL"
+              autoComplete="off"
             />
+          </label>
+          <p className="formHint">
+            Optional. Need your own code? <a href={crispyReferralUrl} target="_blank" rel="noreferrer">Join GUGO here</a>, then use your referral URL on future uploads.
+          </p>
+          <label>
+            <span>Images</span>
+            <span
+              className={`dropZone ${isDragging ? "dragging" : ""}`}
+              onDragEnter={(event) => {
+                event.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragOver={(event) => event.preventDefault()}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={onDrop}
+            >
+              <Upload />
+              <strong>Drop images here</strong>
+              <small>or click to choose up to {maxUploadFiles}</small>
+              <input
+                key={fileInputKey}
+                className="dropZoneInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                onChange={onFileChange}
+              />
+            </span>
           </label>
           {files.length > 0 && (
             <p className="selectedFiles">{files.length === 1 ? files[0].name : `${files.length} images selected`}</p>
@@ -373,6 +461,11 @@ function LatestApprovedMemes({
                       Follow fellow runner @{image.twitterHandle}
                     </a>
                   )}
+                  {image.referralUrl && (
+                    <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+                      {referralLinkText(image)}
+                    </a>
+                  )}
                 </div>
               </article>
             );
@@ -394,8 +487,9 @@ function AdminView({ onGalleryChanged }: { onGalleryChanged: () => Promise<void>
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [moderation, setModeration] = useState<ModerationPayload>({ pending: [], approved: [] });
+  const moderationRef = useRef<ModerationPayload>(moderation);
 
-  async function loadModeration() {
+  async function loadModeration(options: { notifyNewUploads?: boolean } = {}) {
     const response = await fetch("/api/admin/moderation");
     if (response.status === 401) {
       setLoggedIn(false);
@@ -403,7 +497,15 @@ function AdminView({ onGalleryChanged }: { onGalleryChanged: () => Promise<void>
     }
     const data = await response.json();
     if (!response.ok || data.error) throw new Error(data.error ?? "Could not load moderation queue.");
-    setModeration({ pending: data.pending ?? [], approved: data.approved ?? [] });
+    const nextModeration = { pending: data.pending ?? [], approved: data.approved ?? [] };
+    const previousModeration = moderationRef.current;
+    if (moderationSignature(previousModeration) !== moderationSignature(nextModeration)) {
+      setModeration(nextModeration);
+      moderationRef.current = nextModeration;
+      if (options.notifyNewUploads && hasNewPendingUploads(previousModeration, nextModeration)) {
+        setNotice({ type: "success", text: "New uploads loaded for review." });
+      }
+    }
     setLoggedIn(true);
   }
 
@@ -453,6 +555,25 @@ function AdminView({ onGalleryChanged }: { onGalleryChanged: () => Promise<void>
   useEffect(() => {
     loadModeration().catch(() => setLoggedIn(false));
   }, []);
+
+  useEffect(() => {
+    moderationRef.current = moderation;
+  }, [moderation]);
+
+  useEffect(() => {
+    if (!loggedIn || busy) return;
+    const intervalId = window.setInterval(() => {
+      loadModeration({ notifyNewUploads: true }).catch(() => undefined);
+    }, moderationPollMs);
+    const onFocus = () => {
+      loadModeration({ notifyNewUploads: true }).catch(() => undefined);
+    };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [busy, loggedIn]);
 
   if (!loggedIn) {
     return (
@@ -543,6 +664,11 @@ function ModerationSection({
                     @{image.twitterHandle}
                   </a>
                 )}
+                {image.referralUrl && (
+                  <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+                    {referralLinkText(image)}
+                  </a>
+                )}
                 <div className="moderationActions">{renderActions(image)}</div>
               </div>
             </article>
@@ -586,10 +712,14 @@ function Lightbox({
           <div>
             <span>{index + 1} / {total}</span>
             <h2>{image.title}</h2>
-            <p>{image.filename}</p>
             {image.twitterHandle && image.twitterUrl && (
               <a className="lightboxAttribution" href={image.twitterUrl} target="_blank" rel="noreferrer">
                 @{image.twitterHandle}
+              </a>
+            )}
+            {image.referralUrl && (
+              <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+                {referralLinkText(image)}
               </a>
             )}
           </div>
