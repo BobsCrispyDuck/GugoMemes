@@ -141,7 +141,6 @@ function Header({ imageCount, view }: { imageCount: number; view: View }) {
         <nav className="heroNav" aria-label="GUGO pages">
           <a href="/" aria-current={view === "gallery" ? "page" : undefined}>Gallery</a>
           <a href="/upload" aria-current={view === "upload" ? "page" : undefined}>Upload</a>
-          <a href="/admin" aria-current={view === "admin" ? "page" : undefined}>Admin</a>
           <a href="https://gugo.run/register.html?ref=RUNGRZJ" target="_blank" rel="noreferrer">Main GUGO site</a>
         </nav>
       </div>
