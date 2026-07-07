@@ -28,6 +28,7 @@ const categories: Array<{ id: CategoryId; label: string; empty: string }> = [
   { id: "holder-submitted-gifs", label: "Holder submitted GIFs", empty: "No holder GIFs have been approved yet." }
 ];
 const maxUploadFiles = 20;
+const maxUploadFileMb = 80;
 const moderationPollMs = 15000;
 const crispyReferralUrl = "https://gugo.run/register.html?ref=RUNGRZJ";
 const acceptedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -328,6 +329,12 @@ function UploadView({
     if (imageFiles.length !== nextFiles.length) {
       setNotice({ type: "error", text: "Only JPG, PNG, WebP, and GIF images are allowed." });
     }
+    const oversizedFile = imageFiles.find((file) => file.size > maxUploadFileMb * 1024 * 1024);
+    if (oversizedFile) {
+      setFiles([]);
+      setNotice({ type: "error", text: `${oversizedFile.name} is over ${maxUploadFileMb} MB.` });
+      return;
+    }
     if (imageFiles.length > maxUploadFiles) {
       setFiles(imageFiles.slice(0, maxUploadFiles));
       setNotice({ type: "error", text: `Only ${maxUploadFiles} images can be uploaded at once.` });
@@ -428,7 +435,7 @@ function UploadView({
             >
               <Upload />
               <strong>Drop images here</strong>
-              <small>or click to choose up to {maxUploadFiles}</small>
+              <small>or click to choose up to {maxUploadFiles}, {maxUploadFileMb} MB each</small>
               <input
                 key={fileInputKey}
                 className="dropZoneInput"

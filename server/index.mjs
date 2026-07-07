@@ -13,6 +13,7 @@ const publicMemeDir = path.join(rootDir, "public", "memes");
 const storageDir = resolveStorageDir(process.env.GUGO_STORAGE_DIR ?? "storage");
 const pendingDir = path.join(storageDir, "pending");
 const approvedDir = path.join(storageDir, "approved");
+const uploadTempDir = path.join(storageDir, "tmp");
 const pendingMetaDir = path.join(storageDir, "pending-meta");
 const approvedMetaDir = path.join(storageDir, "approved-meta");
 const port = Number(process.env.PORT ?? 8788);
@@ -20,6 +21,8 @@ const uploadPassword = process.env.GUGO_UPLOAD_PASSWORD;
 const adminPassword = process.env.GUGO_ADMIN_PASSWORD;
 const sessionSecret = process.env.GUGO_SESSION_SECRET;
 const referralBaseUrl = "https://gugo.run/register.html";
+const maxUploadFileMb = 80;
+const maxUploadFiles = 20;
 const allowedExts = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
 const allowedMimes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
@@ -30,15 +33,21 @@ if (!uploadPassword || !adminPassword || !sessionSecret) {
 
 await fs.mkdir(pendingDir, { recursive: true });
 await fs.mkdir(approvedDir, { recursive: true });
+await fs.mkdir(uploadTempDir, { recursive: true });
 await fs.mkdir(pendingMetaDir, { recursive: true });
 await fs.mkdir(approvedMetaDir, { recursive: true });
 
 const app = express();
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (_req, _file, callback) => callback(null, uploadTempDir),
+    filename: (_req, file, callback) => {
+      callback(null, `${new Date().toISOString().replace(/[:.]/g, "-")}-${crypto.randomUUID()}-${cleanOriginalName(file.originalname)}`);
+    }
+  }),
   limits: {
-    fileSize: 20 * 1024 * 1024,
-    files: 20
+    fileSize: maxUploadFileMb * 1024 * 1024,
+    files: maxUploadFiles
   }
 });
 
@@ -76,6 +85,31 @@ function requireAdmin(req, res, next) {
     return;
   }
   next();
+}
+
+async function cleanupUploadedFiles(files) {
+  await Promise.allSettled((Array.isArray(files) ? files : []).map((file) => file.path ? fs.rm(file.path, { force: true }) : Promise.resolve()));
+}
+
+function uploadImages(req, res, next) {
+  upload.array("image", maxUploadFiles)(req, res, (error) => {
+    if (!error) {
+      next();
+      return;
+    }
+
+    void cleanupUploadedFiles(req.files);
+    if (error instanceof multer.MulterError) {
+      const message = error.code === "LIMIT_FILE_SIZE"
+        ? `Each file can be up to ${maxUploadFileMb} MB. Try fewer files at once if the connection times out.`
+        : error.code === "LIMIT_FILE_COUNT"
+          ? `Upload up to ${maxUploadFiles} files at once.`
+          : error.message;
+      res.status(400).json({ error: message });
+      return;
+    }
+    next(error);
+  });
 }
 
 function cleanOriginalName(name) {
@@ -219,14 +253,15 @@ app.get("/api/gallery", async (_req, res, next) => {
   }
 });
 
-app.post("/api/upload", upload.array("image", 20), async (req, res) => {
+app.post("/api/upload", uploadImages, async (req, res) => {
+  const files = Array.isArray(req.files) ? req.files : [];
   try {
     if (!timingSafeEqual(String(req.body?.password ?? ""), uploadPassword)) {
+      await cleanupUploadedFiles(files);
       res.status(401).json({ error: "Wrong upload password." });
       return;
     }
 
-    const files = Array.isArray(req.files) ? req.files : [];
     if (files.length === 0) throw new Error("Choose at least one image first.");
     files.forEach(assertImage);
 
@@ -237,7 +272,7 @@ app.post("/api/upload", upload.array("image", 20), async (req, res) => {
 
     for (const file of files) {
       const filename = safeStorageName(file.originalname);
-      await fs.writeFile(path.join(pendingDir, filename), file.buffer, { flag: "wx" });
+      await fs.rename(file.path, path.join(pendingDir, filename));
       await writeMeta(pendingMetaDir, filename, {
         twitterHandle,
         referralCode,
@@ -249,6 +284,7 @@ app.post("/api/upload", upload.array("image", 20), async (req, res) => {
 
     res.json({ ok: true, filenames });
   } catch (error) {
+    await cleanupUploadedFiles(files);
     res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." });
   }
 });
