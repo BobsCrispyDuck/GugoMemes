@@ -285,6 +285,25 @@ h1 {
   white-space: nowrap;
 }
 
+.attributionLink,
+.moderationAttribution,
+.lightboxAttribution {
+  color: var(--blue);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 900;
+  margin-top: 6px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.attributionLink:hover,
+.moderationAttribution:hover,
+.lightboxAttribution:hover {
+  color: var(--accent);
+}
+
 .downloadButton,
 .iconButton,
 .actionButton,
@@ -670,6 +689,10 @@ h1 {
   color: var(--muted);
   font-size: 0.78rem;
   overflow-wrap: anywhere;
+}
+
+.moderationAttribution {
+  margin-top: -6px;
 }
 
 .moderationActions {

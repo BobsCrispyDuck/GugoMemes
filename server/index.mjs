@@ -13,6 +13,8 @@ const publicMemeDir = path.join(rootDir, "public", "memes");
 const storageDir = path.resolve(rootDir, process.env.GUGO_STORAGE_DIR ?? "storage");
 const pendingDir = path.join(storageDir, "pending");
 const approvedDir = path.join(storageDir, "approved");
+const pendingMetaDir = path.join(storageDir, "pending-meta");
+const approvedMetaDir = path.join(storageDir, "approved-meta");
 const port = Number(process.env.PORT ?? 8788);
 const uploadPassword = process.env.GUGO_UPLOAD_PASSWORD;
 const adminPassword = process.env.GUGO_ADMIN_PASSWORD;
@@ -27,6 +29,8 @@ if (!uploadPassword || !adminPassword || !sessionSecret) {
 
 await fs.mkdir(pendingDir, { recursive: true });
 await fs.mkdir(approvedDir, { recursive: true });
+await fs.mkdir(pendingMetaDir, { recursive: true });
+await fs.mkdir(approvedMetaDir, { recursive: true });
 
 const app = express();
 const upload = multer({
@@ -81,6 +85,39 @@ function assertImage(file) {
   if (!allowedExts.has(ext)) throw new Error("Only JPG, PNG, and WebP images are allowed.");
 }
 
+function normalizeTwitterHandle(raw) {
+  const cleaned = String(raw ?? "")
+    .trim()
+    .replace(/^https?:\/\/(www\.)?(twitter\.com|x\.com)\//i, "")
+    .replace(/^@/, "")
+    .split(/[/?#]/)[0]
+    .trim();
+
+  if (!cleaned) return null;
+  if (!/^[A-Za-z0-9_]{1,15}$/.test(cleaned)) {
+    throw new Error("Twitter handle should be 1-15 letters, numbers, or underscores.");
+  }
+  return cleaned;
+}
+
+async function readMeta(metaDir, filename) {
+  try {
+    const raw = await fs.readFile(path.join(metaDir, `${filename}.json`), "utf8");
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    return {};
+  }
+}
+
+async function writeMeta(metaDir, filename, meta) {
+  await fs.writeFile(path.join(metaDir, `${filename}.json`), JSON.stringify(meta, null, 2));
+}
+
+async function deleteMeta(metaDir, filename) {
+  await fs.rm(path.join(metaDir, `${filename}.json`), { force: true });
+}
+
 async function listImages(dir, urlPrefix, startIndex = 0, category = "gugo-images") {
   let files = [];
   try {
@@ -89,17 +126,25 @@ async function listImages(dir, urlPrefix, startIndex = 0, category = "gugo-image
     if (error?.code !== "ENOENT") throw error;
   }
 
-  return files
+  const imageFiles = files
     .filter((file) => allowedExts.has(path.extname(file).toLowerCase()))
-    .sort((a, b) => a.localeCompare(b))
-    .map((filename, index) => ({
+    .sort((a, b) => a.localeCompare(b));
+
+  return Promise.all(imageFiles.map(async (filename, index) => {
+    const metaDir = urlPrefix.includes("pending-image") ? pendingMetaDir : urlPrefix.includes("approved") ? approvedMetaDir : null;
+    const meta = metaDir ? await readMeta(metaDir, filename) : {};
+    const twitterHandle = meta.twitterHandle ?? null;
+    return {
       id: filename.replace(/\.[^.]+$/, ""),
       title: `GUGO ${String(startIndex + index + 1).padStart(2, "0")}`,
       filename,
       src: `${urlPrefix}/${encodeURIComponent(filename)}`,
       category,
-      source: urlPrefix.includes("approved") ? "approved" : "static"
-    }));
+      source: urlPrefix.includes("approved") ? "approved" : "static",
+      twitterHandle,
+      twitterUrl: twitterHandle ? `https://x.com/${twitterHandle}` : null
+    };
+  }));
 }
 
 async function pendingImages() {
@@ -128,8 +173,14 @@ app.post("/api/upload", upload.single("image"), async (req, res) => {
     }
 
     assertImage(req.file);
+    const twitterHandle = normalizeTwitterHandle(req.body?.twitterHandle);
     const filename = safeStorageName(req.file.originalname);
     await fs.writeFile(path.join(pendingDir, filename), req.file.buffer, { flag: "wx" });
+    await writeMeta(pendingMetaDir, filename, {
+      twitterHandle,
+      originalName: req.file.originalname,
+      submittedAt: new Date().toISOString()
+    });
     res.json({ ok: true, filename });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Upload failed." });
@@ -176,6 +227,9 @@ app.post("/api/admin/approve", requireAdmin, async (req, res) => {
     const filename = path.basename(String(req.body?.filename ?? ""));
     if (!filename) throw new Error("Missing filename.");
     await fs.rename(path.join(pendingDir, filename), path.join(approvedDir, filename));
+    await fs.rename(path.join(pendingMetaDir, `${filename}.json`), path.join(approvedMetaDir, `${filename}.json`)).catch((error) => {
+      if (error?.code !== "ENOENT") throw error;
+    });
     res.json({ ok: true });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Approve failed." });
@@ -187,6 +241,7 @@ app.post("/api/admin/delete-pending", requireAdmin, async (req, res) => {
     const filename = path.basename(String(req.body?.filename ?? ""));
     if (!filename) throw new Error("Missing filename.");
     await fs.rm(path.join(pendingDir, filename), { force: true });
+    await deleteMeta(pendingMetaDir, filename);
     res.json({ ok: true });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Delete failed." });
@@ -198,6 +253,7 @@ app.post("/api/admin/delete-approved", requireAdmin, async (req, res) => {
     const filename = path.basename(String(req.body?.filename ?? ""));
     if (!filename) throw new Error("Missing filename.");
     await fs.rm(path.join(approvedDir, filename), { force: true });
+    await deleteMeta(approvedMetaDir, filename);
     res.json({ ok: true });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Delete failed." });

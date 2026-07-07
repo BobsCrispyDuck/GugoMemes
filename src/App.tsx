@@ -142,6 +142,7 @@ function Header({ imageCount, view }: { imageCount: number; view: View }) {
           <a href="/" aria-current={view === "gallery" ? "page" : undefined}>Gallery</a>
           <a href="/upload" aria-current={view === "upload" ? "page" : undefined}>Upload</a>
           <a href="/admin" aria-current={view === "admin" ? "page" : undefined}>Admin</a>
+          <a href="https://gugo.run/register.html?ref=RUNGRZJ" target="_blank" rel="noreferrer">Main GUGO site</a>
         </nav>
       </div>
       <div className="heroStats" aria-label="Gallery summary">
@@ -207,6 +208,11 @@ function GalleryView({
                   <div>
                     <h2>{image.title}</h2>
                     <p>{image.filename}</p>
+                    {image.twitterHandle && image.twitterUrl && (
+                      <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
+                        @{image.twitterHandle}
+                      </a>
+                    )}
                   </div>
                   <a className="downloadButton" href={src} download={image.filename} aria-label={`Download ${image.title}`}>
                     <Download />
@@ -223,6 +229,7 @@ function GalleryView({
 
 function UploadView() {
   const [password, setPassword] = useState("");
+  const [twitterHandle, setTwitterHandle] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
@@ -237,6 +244,7 @@ function UploadView() {
 
     const form = new FormData();
     form.append("password", password);
+    form.append("twitterHandle", twitterHandle);
     form.append("image", file);
     setBusy(true);
     try {
@@ -245,6 +253,7 @@ function UploadView() {
       if (!response.ok || data.error) throw new Error(data.error ?? "Upload failed.");
       setFile(null);
       setPassword("");
+      setTwitterHandle("");
       setNotice({ type: "success", text: "Uploaded. It will show up after approval." });
     } catch (error) {
       setNotice({ type: "error", text: error instanceof Error ? error.message : "Upload failed." });
@@ -264,6 +273,16 @@ function UploadView() {
         <label>
           <span>Upload password</span>
           <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+        </label>
+        <label>
+          <span>Twitter handle</span>
+          <input
+            type="text"
+            value={twitterHandle}
+            onChange={(event) => setTwitterHandle(event.target.value)}
+            placeholder="@yourhandle"
+            autoComplete="off"
+          />
         </label>
         <label>
           <span>Image</span>
@@ -429,6 +448,11 @@ function ModerationSection({
               <img src={image.src ?? imageUrl(image.filename)} alt={image.filename} />
               <div>
                 <strong>{image.filename}</strong>
+                {image.twitterHandle && image.twitterUrl && (
+                  <a className="moderationAttribution" href={image.twitterUrl} target="_blank" rel="noreferrer">
+                    @{image.twitterHandle}
+                  </a>
+                )}
                 <div className="moderationActions">{renderActions(image)}</div>
               </div>
             </article>
@@ -473,6 +497,11 @@ function Lightbox({
             <span>{index + 1} / {total}</span>
             <h2>{image.title}</h2>
             <p>{image.filename}</p>
+            {image.twitterHandle && image.twitterUrl && (
+              <a className="lightboxAttribution" href={image.twitterUrl} target="_blank" rel="noreferrer">
+                @{image.twitterHandle}
+              </a>
+            )}
           </div>
           <div className="lightboxActions">
             <a className="actionButton" href={src} download={image.filename} aria-label={`Download ${image.title}`}>

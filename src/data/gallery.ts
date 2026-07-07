@@ -5,6 +5,8 @@ export interface GalleryImage {
   src?: string;
   category?: "gugo-images" | "gugo-memes" | "holder-submitted";
   source?: "static" | "approved";
+  twitterHandle?: string | null;
+  twitterUrl?: string | null;
 }
 
 const filenames = [
