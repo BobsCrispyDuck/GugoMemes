@@ -13,6 +13,15 @@ The gallery is data-driven through `src/data/gallery.ts`; add images to `public/
 For daily imports, drop new source images into `incoming/`. The automation treats
 that folder as the project inbox and copies new images into `public/images/`.
 
+Categories:
+
+- `public/images/` feeds the GUGO images category.
+- `public/memes/` feeds the GUGO memes category.
+- Approved holder uploads feed the Holder submitted memes category.
+
+To run the upload/moderation app, copy `.env.example` to `.env`, set the upload
+and admin passwords, run `npm run build`, then run `npm start`.
+
 ## Deployment
 
 The current static release is served at `https://gugo.crispytools.xyz/`.

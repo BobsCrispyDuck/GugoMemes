@@ -2,6 +2,9 @@ export interface GalleryImage {
   id: string;
   title: string;
   filename: string;
+  src?: string;
+  category?: "gugo-images" | "gugo-memes" | "holder-submitted";
+  source?: "static" | "approved";
 }
 
 const filenames = [
@@ -39,7 +42,8 @@ const filenames = [
 export const galleryImages: GalleryImage[] = filenames.map((filename, index) => ({
   id: filename.replace(/\.[^.]+$/, ""),
   title: `GUGO ${String(index + 1).padStart(2, "0")}`,
-  filename
+  filename,
+  category: "gugo-images"
 }));
 
 export function imageUrl(filename: string) {

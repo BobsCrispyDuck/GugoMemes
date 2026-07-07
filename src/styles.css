@@ -125,6 +125,39 @@ h1 {
   text-wrap: pretty;
 }
 
+.heroNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.heroNav a,
+.categoryTabs button {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(29, 33, 39, 0.78);
+  color: var(--text);
+  display: inline-flex;
+  font-size: 0.84rem;
+  font-weight: 900;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.heroNav a:hover,
+.heroNav a[aria-current="page"],
+.categoryTabs button:hover,
+.categoryTabs button.active {
+  border-color: rgba(255, 209, 79, 0.55);
+  background: rgba(255, 209, 79, 0.14);
+  color: var(--accent);
+}
+
 .heroStats {
   display: grid;
   min-width: 150px;
@@ -148,6 +181,34 @@ h1 {
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.categoryTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.categoryTabs button {
+  cursor: pointer;
+}
+
+.categoryTabs button strong {
+  align-items: center;
+  background: var(--surface-raised);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 0.72rem;
+  justify-content: center;
+  min-width: 26px;
+  padding: 2px 7px;
+}
+
+.categoryTabs button.active strong {
+  background: var(--accent);
+  color: var(--accent-text);
 }
 
 .gallery {
@@ -400,6 +461,265 @@ h1 {
   width: 24px;
 }
 
+.panel,
+.emptyCategory,
+.moderationBlock {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.panel {
+  max-width: 720px;
+  padding: clamp(18px, 4vw, 30px);
+}
+
+.panelHeader {
+  margin-bottom: 20px;
+}
+
+.panelHeader > span {
+  align-items: center;
+  color: var(--accent);
+  display: inline-flex;
+  font-size: 0.76rem;
+  font-weight: 900;
+  gap: 8px;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.panelHeader svg {
+  height: 16px;
+  width: 16px;
+}
+
+.panelHeader h2,
+.sectionTitle h2,
+.emptyCategory h2 {
+  font-size: clamp(1.5rem, 4vw, 2.3rem);
+  line-height: 1;
+}
+
+.panelHeader p,
+.emptyCategory p,
+.emptyText {
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+.formStack {
+  display: grid;
+  gap: 14px;
+}
+
+.formStack label {
+  display: grid;
+  gap: 7px;
+}
+
+.formStack label > span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.formStack input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  color: var(--text);
+  font: inherit;
+  min-height: 46px;
+  padding: 10px 12px;
+}
+
+.formStack input[type="file"] {
+  padding: 11px 12px;
+}
+
+.primaryButton,
+.dangerButton {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 900;
+  gap: 8px;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 16px;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.primaryButton {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.dangerButton {
+  background: rgba(255, 97, 73, 0.12);
+  border-color: rgba(255, 97, 73, 0.3);
+  color: #ffb3a7;
+}
+
+.primaryButton.compact,
+.dangerButton.compact {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, white);
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: rgba(255, 97, 73, 0.22);
+  border-color: rgba(255, 97, 73, 0.55);
+}
+
+.primaryButton:disabled,
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.primaryButton svg,
+.dangerButton svg {
+  height: 17px;
+  width: 17px;
+}
+
+.notice {
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px 14px;
+}
+
+.notice.success {
+  background: rgba(90, 210, 138, 0.12);
+  border-color: rgba(90, 210, 138, 0.28);
+  color: #97e9b7;
+}
+
+.notice.error {
+  background: rgba(255, 97, 73, 0.12);
+  border-color: rgba(255, 97, 73, 0.28);
+  color: #ffb3a7;
+}
+
+.notice svg {
+  flex: 0 0 auto;
+  height: 19px;
+  width: 19px;
+}
+
+.moderation {
+  display: grid;
+  gap: 18px;
+}
+
+.moderationBlock,
+.emptyCategory {
+  padding: 18px;
+}
+
+.sectionTitle {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.sectionTitle span {
+  align-items: center;
+  background: var(--accent);
+  border-radius: 999px;
+  color: var(--accent-text);
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 900;
+  justify-content: center;
+  min-width: 32px;
+  padding: 4px 10px;
+}
+
+.moderationGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.moderationCard {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+
+.moderationCard img {
+  aspect-ratio: 1 / 1;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.moderationCard > div {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.moderationCard strong {
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.moderationActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.emptyCategory {
+  align-items: center;
+  display: grid;
+  justify-items: center;
+  min-height: 260px;
+  text-align: center;
+}
+
+.emptyCategory > svg {
+  color: var(--accent);
+  height: 38px;
+  margin-bottom: 10px;
+  width: 38px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 760px) {
   .shell {
     padding: 16px;
@@ -419,6 +739,15 @@ h1 {
   .heroStats {
     justify-self: start;
     min-width: 128px;
+  }
+
+  .categoryTabs {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .categoryTabs button {
+    justify-content: space-between;
   }
 
   .gallery {
@@ -475,5 +804,9 @@ h1 {
 
   .navButton {
     width: 100%;
+  }
+
+  .moderationGrid {
+    grid-template-columns: 1fr;
   }
 }
