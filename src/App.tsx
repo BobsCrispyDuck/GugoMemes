@@ -36,20 +36,22 @@ export function App() {
   const [images, setImages] = useState<GalleryImage[]>(galleryImages);
   const [activeCategory, setActiveCategory] = useState<CategoryId>("gugo-images");
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [lightboxImages, setLightboxImages] = useState<GalleryImage[]>([]);
   const view = currentView();
   const visibleImages = useMemo(
     () => images.filter((image) => (image.category ?? "gugo-images") === activeCategory),
     [activeCategory, images]
   );
   const activeIndex = useMemo(
-    () => visibleImages.findIndex((image) => image.id === activeId),
-    [activeId, visibleImages]
+    () => lightboxImages.findIndex((image) => image.id === activeId),
+    [activeId, lightboxImages]
   );
-  const activeImage = activeIndex >= 0 ? visibleImages[activeIndex] : null;
-  const latestApprovedMeme = useMemo(
+  const activeImage = activeIndex >= 0 ? lightboxImages[activeIndex] : null;
+  const latestApprovedMemes = useMemo(
     () => [...images]
       .filter((image) => image.category === "holder-submitted" && image.source === "approved")
-      .sort((a, b) => approvalSortValue(b).localeCompare(approvalSortValue(a)))[0] ?? null,
+      .sort((a, b) => approvalSortValue(b).localeCompare(approvalSortValue(a)))
+      .slice(0, 3),
     [images]
   );
 
@@ -64,7 +66,8 @@ export function App() {
     }
   }
 
-  function openImage(image: GalleryImage) {
+  function openImage(image: GalleryImage, scopedImages = visibleImages) {
+    setLightboxImages(scopedImages);
     setActiveId(image.id);
   }
 
@@ -74,8 +77,8 @@ export function App() {
 
   function moveLightbox(direction: -1 | 1) {
     if (activeIndex < 0) return;
-    const nextIndex = (activeIndex + direction + visibleImages.length) % visibleImages.length;
-    setActiveId(visibleImages[nextIndex].id);
+    const nextIndex = (activeIndex + direction + lightboxImages.length) % lightboxImages.length;
+    setActiveId(lightboxImages[nextIndex].id);
   }
 
   useEffect(() => {
@@ -91,7 +94,7 @@ export function App() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeImage, activeIndex, visibleImages]);
+  }, [activeImage, activeIndex, lightboxImages]);
 
   useEffect(() => {
     document.body.style.overflow = activeImage ? "hidden" : "";
@@ -104,7 +107,7 @@ export function App() {
     <main className="shell">
       <Header imageCount={images.length} view={view} />
       {view === "upload" ? (
-        <UploadView latestApprovedMeme={latestApprovedMeme} />
+        <UploadView latestApprovedMemes={latestApprovedMemes} onImageOpen={openImage} />
       ) : view === "admin" ? (
         <AdminView onGalleryChanged={refreshGallery} />
       ) : (
@@ -115,7 +118,7 @@ export function App() {
         <Lightbox
           image={activeImage}
           index={activeIndex}
-          total={visibleImages.length}
+          total={lightboxImages.length}
           onClose={closeLightbox}
           onPrevious={() => moveLightbox(-1)}
           onNext={() => moveLightbox(1)}
@@ -247,7 +250,13 @@ function GalleryView({
   );
 }
 
-function UploadView({ latestApprovedMeme }: { latestApprovedMeme: GalleryImage | null }) {
+function UploadView({
+  latestApprovedMemes,
+  onImageOpen
+}: {
+  latestApprovedMemes: GalleryImage[];
+  onImageOpen: (image: GalleryImage, scopedImages?: GalleryImage[]) => void;
+}) {
   const [password, setPassword] = useState("");
   const [twitterHandle, setTwitterHandle] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -328,37 +337,47 @@ function UploadView({ latestApprovedMeme }: { latestApprovedMeme: GalleryImage |
         </form>
         <NoticeBox notice={notice} />
       </div>
-      <LatestApprovedMeme image={latestApprovedMeme} />
+      <LatestApprovedMemes images={latestApprovedMemes} onImageOpen={onImageOpen} />
     </section>
   );
 }
 
-function LatestApprovedMeme({ image }: { image: GalleryImage | null }) {
-  const src = image ? image.src ?? imageUrl(image.filename) : null;
-  const approvalDate = image ? formatApprovalDate(image) : null;
-
+function LatestApprovedMemes({
+  images,
+  onImageOpen
+}: {
+  images: GalleryImage[];
+  onImageOpen: (image: GalleryImage, scopedImages?: GalleryImage[]) => void;
+}) {
   return (
-    <aside className="latestMemePanel" aria-label="Latest approved meme">
+    <aside className="latestMemePanel" aria-label="Latest approved memes">
       <div className="latestMemeHeader">
-        <span>Latest approved meme</span>
+        <span>Latest approved memes</span>
         <h2>Recently cleared</h2>
       </div>
-      {image && src ? (
-        <>
-          <a className="latestMemeImage" href={src} target="_blank" rel="noreferrer">
-            <img src={src} alt={image.title} />
-            <span>Open meme</span>
-          </a>
-          <div className="latestMemeMeta">
-            <strong>{image.title}</strong>
-            <p>{approvalDate}</p>
-            {image.twitterHandle && image.twitterUrl && (
-              <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
-                Follow fellow runner @{image.twitterHandle}
-              </a>
-            )}
-          </div>
-        </>
+      {images.length > 0 ? (
+        <div className="latestMemeList">
+          {images.map((image) => {
+            const src = image.src ?? imageUrl(image.filename);
+            return (
+              <article className="latestMemeItem" key={image.id}>
+                <button className="latestMemeImage" onClick={() => onImageOpen(image, images)}>
+                  <img src={src} alt={image.title} />
+                  <span>View</span>
+                </button>
+                <div className="latestMemeMeta">
+                  <strong>{image.title}</strong>
+                  <p>{formatApprovalDate(image)}</p>
+                  {image.twitterHandle && image.twitterUrl && (
+                    <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
+                      Follow fellow runner @{image.twitterHandle}
+                    </a>
+                  )}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       ) : (
         <div className="latestMemeEmpty">
           <ImagePlus />

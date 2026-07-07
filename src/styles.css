@@ -654,6 +654,18 @@ h1 {
   padding: clamp(18px, 4vw, 30px);
 }
 
+.latestMemeList {
+  display: grid;
+  gap: 12px;
+}
+
+.latestMemeItem {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 132px minmax(0, 1fr);
+}
+
 .latestMemeHeader span {
   color: var(--accent);
   display: block;
@@ -677,8 +689,12 @@ h1 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-raised);
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
   place-items: center;
   text-decoration: none;
+  width: 100%;
 }
 
 .latestMemeImage img {
@@ -717,7 +733,7 @@ h1 {
 
 .latestMemeMeta strong {
   display: block;
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1.1;
 }
 
@@ -729,6 +745,10 @@ h1 {
   font-weight: 750;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.latestMemeMeta .attributionLink {
+  font-size: 0.74rem;
 }
 
 .latestMemeEmpty {
@@ -905,6 +925,10 @@ h1 {
   .latestMemeImage span {
     opacity: 1;
     transform: translateY(0);
+  }
+
+  .latestMemeItem {
+    grid-template-columns: 112px minmax(0, 1fr);
   }
 
   .lightbox {
