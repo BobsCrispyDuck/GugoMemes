@@ -142,7 +142,9 @@ async function listImages(dir, urlPrefix, startIndex = 0, category = "gugo-image
       category,
       source: urlPrefix.includes("approved") ? "approved" : "static",
       twitterHandle,
-      twitterUrl: twitterHandle ? `https://x.com/${twitterHandle}` : null
+      twitterUrl: twitterHandle ? `https://x.com/${twitterHandle}` : null,
+      submittedAt: meta.submittedAt ?? null,
+      approvedAt: meta.approvedAt ?? null
     };
   }));
 }
@@ -227,9 +229,12 @@ app.post("/api/admin/approve", requireAdmin, async (req, res) => {
     const filename = path.basename(String(req.body?.filename ?? ""));
     if (!filename) throw new Error("Missing filename.");
     await fs.rename(path.join(pendingDir, filename), path.join(approvedDir, filename));
-    await fs.rename(path.join(pendingMetaDir, `${filename}.json`), path.join(approvedMetaDir, `${filename}.json`)).catch((error) => {
-      if (error?.code !== "ENOENT") throw error;
+    const meta = await readMeta(pendingMetaDir, filename);
+    await writeMeta(approvedMetaDir, filename, {
+      ...meta,
+      approvedAt: new Date().toISOString()
     });
+    await deleteMeta(pendingMetaDir, filename);
     res.json({ ok: true });
   } catch (error) {
     res.status(400).json({ error: error instanceof Error ? error.message : "Approve failed." });

@@ -46,6 +46,12 @@ export function App() {
     [activeId, visibleImages]
   );
   const activeImage = activeIndex >= 0 ? visibleImages[activeIndex] : null;
+  const latestApprovedMeme = useMemo(
+    () => [...images]
+      .filter((image) => image.category === "holder-submitted" && image.source === "approved")
+      .sort((a, b) => approvalSortValue(b).localeCompare(approvalSortValue(a)))[0] ?? null,
+    [images]
+  );
 
   async function refreshGallery() {
     try {
@@ -98,7 +104,7 @@ export function App() {
     <main className="shell">
       <Header imageCount={images.length} view={view} />
       {view === "upload" ? (
-        <UploadView />
+        <UploadView latestApprovedMeme={latestApprovedMeme} />
       ) : view === "admin" ? (
         <AdminView onGalleryChanged={refreshGallery} />
       ) : (
@@ -124,6 +130,10 @@ function currentView(): View {
   if (path === "/upload") return "upload";
   if (path === "/admin") return "admin";
   return "gallery";
+}
+
+function approvalSortValue(image: GalleryImage) {
+  return image.approvedAt ?? image.submittedAt ?? image.filename;
 }
 
 function Header({ imageCount, view }: { imageCount: number; view: View }) {
@@ -226,7 +236,7 @@ function GalleryView({
   );
 }
 
-function UploadView() {
+function UploadView({ latestApprovedMeme }: { latestApprovedMeme: GalleryImage | null }) {
   const [password, setPassword] = useState("");
   const [twitterHandle, setTwitterHandle] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -262,38 +272,76 @@ function UploadView() {
   }
 
   return (
-    <section className="panel uploadPanel">
-      <div className="panelHeader">
-        <span><Lock /> Password required</span>
-        <h2>Submit a meme for review</h2>
-        <p>Uploads do not go live automatically. Crispy gets final say.</p>
+    <section className="uploadLayout">
+      <div className="panel uploadPanel">
+        <div className="panelHeader">
+          <span><Lock /> Password required</span>
+          <h2>Submit a meme for review</h2>
+          <p>Uploads do not go live automatically. Crispy gets final say.</p>
+        </div>
+        <form className="formStack" onSubmit={submitUpload}>
+          <label>
+            <span>Upload password</span>
+            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+          </label>
+          <label>
+            <span>Twitter handle</span>
+            <input
+              type="text"
+              value={twitterHandle}
+              onChange={(event) => setTwitterHandle(event.target.value)}
+              placeholder="@yourhandle"
+              autoComplete="off"
+            />
+          </label>
+          <label>
+            <span>Image</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+          </label>
+          <button className="primaryButton" type="submit" disabled={busy}>
+            {busy ? <Loader2 className="spin" /> : <Upload />}
+            {busy ? "Uploading" : "Upload for review"}
+          </button>
+        </form>
+        <NoticeBox notice={notice} />
       </div>
-      <form className="formStack" onSubmit={submitUpload}>
-        <label>
-          <span>Upload password</span>
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
-        </label>
-        <label>
-          <span>Twitter handle</span>
-          <input
-            type="text"
-            value={twitterHandle}
-            onChange={(event) => setTwitterHandle(event.target.value)}
-            placeholder="@yourhandle"
-            autoComplete="off"
-          />
-        </label>
-        <label>
-          <span>Image</span>
-          <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-        </label>
-        <button className="primaryButton" type="submit" disabled={busy}>
-          {busy ? <Loader2 className="spin" /> : <Upload />}
-          {busy ? "Uploading" : "Upload for review"}
-        </button>
-      </form>
-      <NoticeBox notice={notice} />
+      <LatestApprovedMeme image={latestApprovedMeme} />
     </section>
+  );
+}
+
+function LatestApprovedMeme({ image }: { image: GalleryImage | null }) {
+  const src = image ? image.src ?? imageUrl(image.filename) : null;
+
+  return (
+    <aside className="latestMemePanel" aria-label="Latest approved meme">
+      <div className="latestMemeHeader">
+        <span>Latest approved meme</span>
+        <h2>Recently cleared</h2>
+      </div>
+      {image && src ? (
+        <>
+          <a className="latestMemeImage" href={src} target="_blank" rel="noreferrer">
+            <img src={src} alt={image.title} />
+            <span>Open meme</span>
+          </a>
+          <div className="latestMemeMeta">
+            <strong>{image.title}</strong>
+            <p>{image.filename}</p>
+            {image.twitterHandle && image.twitterUrl && (
+              <a className="attributionLink" href={image.twitterUrl} target="_blank" rel="noreferrer">
+                @{image.twitterHandle}
+              </a>
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="latestMemeEmpty">
+          <ImagePlus />
+          <p>Approved holder memes will land here.</p>
+        </div>
+      )}
+    </aside>
   );
 }
 

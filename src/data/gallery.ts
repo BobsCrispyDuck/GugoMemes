@@ -7,6 +7,8 @@ export interface GalleryImage {
   source?: "static" | "approved";
   twitterHandle?: string | null;
   twitterUrl?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
 }
 
 const filenames = [
