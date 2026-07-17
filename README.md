@@ -1,5 +1,7 @@
 # GUGO Gallery
 
+Status note, 2026-07-17: hosted production has moved to DigitalOcean. See `DEPLOYMENT_TARGET.md` before deployment work.
+
 Standalone static gallery for `https://gugo.crispytools.xyz/`.
 
 ## Local commands
