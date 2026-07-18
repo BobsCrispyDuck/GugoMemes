@@ -28,7 +28,7 @@ GugoMemes should use the DigitalOcean deployment path from here forward.
 - Public IPv4: `142.93.48.127`
 - Current app home: `/srv/gugogallery/app/current`
 - Environment file: `/etc/gugogallery/gugogallery.env`
-- Service: `gugo-gallery.service`
+- Service: `gugogallery.service`
 - Route: `gugo.crispytools.xyz`
 - Current target map: `C:\Dev\CrispyStack\docs\deployment\current-deployment-targets.md`
 
