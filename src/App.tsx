@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { trackOutcome } from "./analytics";
 import { GalleryImage, galleryImages, imageUrl } from "./data/gallery";
 
 type View = "gallery" | "upload" | "admin";
@@ -218,7 +219,7 @@ function Header({ imageCount, view }: { imageCount: number; view: View }) {
         <nav className="heroNav" aria-label="GUGO pages">
           <a href="/" aria-current={view === "gallery" ? "page" : undefined}>Gallery</a>
           <a href="/upload" aria-current={view === "upload" ? "page" : undefined}>Upload</a>
-          <a href="https://gugo.run/register.html?ref=RUNGRZJ" target="_blank" rel="noreferrer">Main GUGO site</a>
+          <a href="https://gugo.run/register.html?ref=RUNGRZJ" target="_blank" rel="noreferrer" onClick={() => trackOutcome("gugo_registration_click")}>Main GUGO site</a>
         </nav>
       </div>
       <div className="heroStats" aria-label="Gallery summary">
@@ -289,12 +290,12 @@ function GalleryView({
                       </a>
                     )}
                     {image.referralUrl && (
-                      <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+                      <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer" onClick={() => trackOutcome("gugo_registration_click")}>
                         {referralLinkText(image)}
                       </a>
                     )}
                   </div>
-                  <a className="downloadButton" href={src} download={image.filename} aria-label={`Download ${title}`}>
+                  <a className="downloadButton" href={src} download={image.filename} aria-label={`Download ${title}`} onClick={() => trackOutcome("gallery_download")}>
                     <Download />
                   </a>
                 </div>
@@ -378,6 +379,7 @@ function UploadView({
       setTwitterHandle("");
       setReferralCode("");
       setNotice({ type: "success", text: uploadCount === 1 ? "Uploaded. It will show up after approval." : `${uploadCount} uploads queued for review.` });
+      trackOutcome("meme_submission");
     } catch (error) {
       setNotice({ type: "error", text: error instanceof Error ? error.message : "Upload failed." });
     } finally {
@@ -419,7 +421,7 @@ function UploadView({
             />
           </label>
           <p className="formHint">
-            Optional. Need your own code? <a href={crispyReferralUrl} target="_blank" rel="noreferrer">Join GUGO here</a>, then use your referral URL on future uploads.
+            Optional. Need your own code? <a href={crispyReferralUrl} target="_blank" rel="noreferrer" onClick={() => trackOutcome("gugo_registration_click")}>Join GUGO here</a>, then use your referral URL on future uploads.
           </p>
           <label>
             <span>Images</span>
@@ -494,7 +496,7 @@ function LatestApprovedMemes({
                       </a>
                     )}
                     {image.referralUrl && (
-                      <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+                      <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer" onClick={() => trackOutcome("gugo_registration_click")}>
                         Join pack
                       </a>
                     )}
@@ -785,13 +787,13 @@ function Lightbox({
               </a>
             )}
             {image.referralUrl && (
-              <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer">
+              <a className="packLink" href={image.referralUrl} target="_blank" rel="noreferrer" onClick={() => trackOutcome("gugo_registration_click")}>
                 {referralLinkText(image)}
               </a>
             )}
           </div>
           <div className="lightboxActions">
-            <a className="actionButton" href={src} download={image.filename} aria-label={`Download ${title}`}>
+            <a className="actionButton" href={src} download={image.filename} aria-label={`Download ${title}`} onClick={() => trackOutcome("gallery_download")}>
               <Download />
               Download
             </a>
